@@ -47,14 +47,13 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 // Servicios propios
 builder.Services.AddScoped<ITokenService, TokenService>();
-
 // Auth JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

@@ -1,6 +1,6 @@
-﻿using System.Security.Claims;
-using ExpenseTracker.Api.Data;
+﻿using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.DTOs.Transaction;
+using ExpenseTracker.Api.Interfaces;
 using ExpenseTracker.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,16 +14,20 @@ namespace ExpenseTracker.Api.Controllers;
 public class TransactionsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUserService;
 
-    public TransactionsController(ApplicationDbContext context)
+    public TransactionsController(
+        ApplicationDbContext context,
+        ICurrentUserService currentUserService)
     {
         _context = context;
+        _currentUserService = currentUserService;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TransactionDto>>> GetAll([FromQuery] TransactionQueryParamsDto query)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var transactionsQuery = _context.Transactions
             .Include(t => t.Category)
@@ -74,7 +78,7 @@ public class TransactionsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<TransactionDto>> GetById(int id)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var transaction = await _context.Transactions
             .Include(t => t.Category)
@@ -103,7 +107,7 @@ public class TransactionsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TransactionDto>> Create(CreateTransactionDto dto)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var category = await _context.Categories
             .FirstOrDefaultAsync(c => c.Id == dto.CategoryId && c.UserId == userId);
@@ -150,7 +154,7 @@ public class TransactionsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<TransactionDto>> Update(int id, UpdateTransactionDto dto)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var transaction = await _context.Transactions
             .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
@@ -200,7 +204,7 @@ public class TransactionsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var transaction = await _context.Transactions
             .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
@@ -214,17 +218,5 @@ public class TransactionsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    private int GetUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrWhiteSpace(userIdClaim))
-        {
-            throw new UnauthorizedAccessException("Token inválido.");
-        }
-
-        return int.Parse(userIdClaim);
     }
 }

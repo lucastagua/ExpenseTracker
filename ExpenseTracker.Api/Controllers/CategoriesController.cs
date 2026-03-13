@@ -1,6 +1,6 @@
-﻿using System.Security.Claims;
-using ExpenseTracker.Api.Data;
+﻿using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.DTOs.Category;
+using ExpenseTracker.Api.Interfaces;
 using ExpenseTracker.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,16 +14,20 @@ namespace ExpenseTracker.Api.Controllers;
 public class CategoriesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CategoriesController(ApplicationDbContext context)
+    public CategoriesController(
+        ApplicationDbContext context,
+        ICurrentUserService currentUserService)
     {
         _context = context;
+        _currentUserService = currentUserService;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var categories = await _context.Categories
             .Where(c => c.UserId == userId)
@@ -42,7 +46,7 @@ public class CategoriesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<CategoryDto>> GetById(int id)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var category = await _context.Categories
             .Where(c => c.Id == id && c.UserId == userId)
@@ -65,7 +69,7 @@ public class CategoriesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CategoryDto>> Create(CreateCategoryDto dto)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var categoryExists = await _context.Categories
             .AnyAsync(c => c.UserId == userId && c.Name == dto.Name);
@@ -98,7 +102,7 @@ public class CategoriesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<CategoryDto>> Update(int id, UpdateCategoryDto dto)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var category = await _context.Categories
             .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
@@ -136,7 +140,7 @@ public class CategoriesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {
-        var userId = GetUserId();
+        var userId = _currentUserService.UserId;
 
         var category = await _context.Categories
             .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
@@ -158,17 +162,5 @@ public class CategoriesController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    private int GetUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim))
-        {
-            throw new UnauthorizedAccessException("Token inválido.");
-        }
-
-        return int.Parse(userIdClaim);
     }
 }
