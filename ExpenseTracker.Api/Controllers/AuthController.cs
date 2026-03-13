@@ -2,6 +2,7 @@
 using System.Text;
 using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.DTOs;
+using ExpenseTracker.Api.Enums;
 using ExpenseTracker.Api.Interfaces;
 using ExpenseTracker.Api.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +33,8 @@ public class AuthController : ControllerBase
             return BadRequest("Ya existe un usuario con ese email.");
         }
 
+        await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+
         var user = new User
         {
             Name = registerDto.Name,
@@ -41,6 +44,21 @@ public class AuthController : ControllerBase
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+
+        var defaultCategories = new List<Category>
+    {
+        new Category { Name = "Sueldo", Type = CategoryType.Income, UserId = user.Id },
+        new Category { Name = "Freelance", Type = CategoryType.Income, UserId = user.Id },
+        new Category { Name = "Comida", Type = CategoryType.Expense, UserId = user.Id },
+        new Category { Name = "Transporte", Type = CategoryType.Expense, UserId = user.Id },
+        new Category { Name = "Servicios", Type = CategoryType.Expense, UserId = user.Id },
+        new Category { Name = "Compras", Type = CategoryType.Expense, UserId = user.Id }
+    };
+
+        _context.Categories.AddRange(defaultCategories);
+        await _context.SaveChangesAsync();
+
+        await dbTransaction.CommitAsync();
 
         var token = _tokenService.CreateToken(user);
 
