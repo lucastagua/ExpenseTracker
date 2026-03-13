@@ -51,6 +51,8 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+// Servicios de hashing de contraseñas
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));

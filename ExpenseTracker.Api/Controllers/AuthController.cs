@@ -1,6 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using ExpenseTracker.Api.Data;
+﻿using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.DTOs;
 using ExpenseTracker.Api.Enums;
 using ExpenseTracker.Api.Interfaces;
@@ -16,11 +14,16 @@ public class AuthController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ITokenService _tokenService;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public AuthController(ApplicationDbContext context, ITokenService tokenService)
+    public AuthController(
+        ApplicationDbContext context,
+        ITokenService tokenService,
+        IPasswordHasher passwordHasher)
     {
         _context = context;
         _tokenService = tokenService;
+        _passwordHasher = passwordHasher;
     }
 
     [HttpPost("register")]
@@ -39,21 +42,21 @@ public class AuthController : ControllerBase
         {
             Name = registerDto.Name,
             Email = registerDto.Email,
-            PasswordHash = HashPassword(registerDto.Password)
+            PasswordHash = _passwordHasher.Hash(registerDto.Password)
         };
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
         var defaultCategories = new List<Category>
-    {
-        new Category { Name = "Sueldo", Type = CategoryType.Income, UserId = user.Id },
-        new Category { Name = "Freelance", Type = CategoryType.Income, UserId = user.Id },
-        new Category { Name = "Comida", Type = CategoryType.Expense, UserId = user.Id },
-        new Category { Name = "Transporte", Type = CategoryType.Expense, UserId = user.Id },
-        new Category { Name = "Servicios", Type = CategoryType.Expense, UserId = user.Id },
-        new Category { Name = "Compras", Type = CategoryType.Expense, UserId = user.Id }
-    };
+        {
+            new Category { Name = "Sueldo", Type = CategoryType.Income, UserId = user.Id },
+            new Category { Name = "Freelance", Type = CategoryType.Income, UserId = user.Id },
+            new Category { Name = "Comida", Type = CategoryType.Expense, UserId = user.Id },
+            new Category { Name = "Transporte", Type = CategoryType.Expense, UserId = user.Id },
+            new Category { Name = "Servicios", Type = CategoryType.Expense, UserId = user.Id },
+            new Category { Name = "Compras", Type = CategoryType.Expense, UserId = user.Id }
+        };
 
         _context.Categories.AddRange(defaultCategories);
         await _context.SaveChangesAsync();
@@ -80,9 +83,9 @@ public class AuthController : ControllerBase
             return Unauthorized("Email o contraseña incorrectos.");
         }
 
-        var hashedPassword = HashPassword(loginDto.Password);
+        var isPasswordValid = _passwordHasher.Verify(loginDto.Password, user.PasswordHash);
 
-        if (user.PasswordHash != hashedPassword)
+        if (!isPasswordValid)
         {
             return Unauthorized("Email o contraseña incorrectos.");
         }
@@ -95,13 +98,5 @@ public class AuthController : ControllerBase
             Name = user.Name,
             Email = user.Email
         });
-    }
-
-    private static string HashPassword(string password)
-    {
-        using var sha256 = SHA256.Create();
-        var bytes = Encoding.UTF8.GetBytes(password);
-        var hash = sha256.ComputeHash(bytes);
-        return Convert.ToBase64String(hash);
     }
 }
