@@ -1,4 +1,5 @@
 ﻿using ExpenseTracker.Api.Data;
+using ExpenseTracker.Api.DTOs.Common;
 using ExpenseTracker.Api.DTOs.Transaction;
 using ExpenseTracker.Api.Interfaces;
 using ExpenseTracker.Api.Models;
@@ -25,9 +26,13 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TransactionDto>>> GetAll([FromQuery] TransactionQueryParamsDto query)
+    public async Task<ActionResult<PagedResultDto<TransactionDto>>> GetAll([FromQuery] TransactionQueryParamsDto query)
     {
         var userId = _currentUserService.UserId;
+
+        var pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
+        var pageSize = query.PageSize < 1 ? 10 : query.PageSize;
+        pageSize = pageSize > 50 ? 50 : pageSize;
 
         var transactionsQuery = _context.Transactions
             .Include(t => t.Category)
@@ -56,9 +61,13 @@ public class TransactionsController : ControllerBase
             transactionsQuery = transactionsQuery.Where(t => t.Date <= toDate);
         }
 
+        var totalCount = await transactionsQuery.CountAsync();
+
         var transactions = await transactionsQuery
             .OrderByDescending(t => t.Date)
             .ThenByDescending(t => t.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .Select(t => new TransactionDto
             {
                 Id = t.Id,
@@ -72,7 +81,16 @@ public class TransactionsController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(transactions);
+        var response = new PagedResultDto<TransactionDto>
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+            Items = transactions
+        };
+
+        return Ok(response);
     }
 
     [HttpGet("{id}")]
