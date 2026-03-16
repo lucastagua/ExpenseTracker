@@ -34,6 +34,9 @@ public class TransactionsController : ControllerBase
         var pageSize = query.PageSize < 1 ? 10 : query.PageSize;
         pageSize = pageSize > 50 ? 50 : pageSize;
 
+        var sortBy = query.SortBy?.Trim().ToLower() ?? "date";
+        var sortDirection = query.SortDirection?.Trim().ToLower() ?? "desc";
+
         var transactionsQuery = _context.Transactions
             .Include(t => t.Category)
             .Where(t => t.UserId == userId)
@@ -61,11 +64,11 @@ public class TransactionsController : ControllerBase
             transactionsQuery = transactionsQuery.Where(t => t.Date <= toDate);
         }
 
+        transactionsQuery = ApplySorting(transactionsQuery, sortBy, sortDirection);
+
         var totalCount = await transactionsQuery.CountAsync();
 
         var transactions = await transactionsQuery
-            .OrderByDescending(t => t.Date)
-            .ThenByDescending(t => t.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(t => new TransactionDto
@@ -236,5 +239,35 @@ public class TransactionsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+    private static IQueryable<Transaction> ApplySorting(
+    IQueryable<Transaction> query,
+    string sortBy,
+    string sortDirection)
+    {
+        var isAscending = sortDirection == "asc";
+
+        return sortBy switch
+        {
+            "amount" => isAscending
+                ? query.OrderBy(t => t.Amount).ThenBy(t => t.Id)
+                : query.OrderByDescending(t => t.Amount).ThenByDescending(t => t.Id),
+
+            "description" => isAscending
+                ? query.OrderBy(t => t.Description).ThenBy(t => t.Id)
+                : query.OrderByDescending(t => t.Description).ThenByDescending(t => t.Id),
+
+            "category" => isAscending
+                ? query.OrderBy(t => t.Category.Name).ThenBy(t => t.Id)
+                : query.OrderByDescending(t => t.Category.Name).ThenByDescending(t => t.Id),
+
+            "type" => isAscending
+                ? query.OrderBy(t => t.Type).ThenBy(t => t.Id)
+                : query.OrderByDescending(t => t.Type).ThenByDescending(t => t.Id),
+
+            _ => isAscending
+                ? query.OrderBy(t => t.Date).ThenBy(t => t.Id)
+                : query.OrderByDescending(t => t.Date).ThenByDescending(t => t.Id)
+        };
     }
 }
