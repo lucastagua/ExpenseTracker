@@ -1,8 +1,10 @@
 ﻿using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.DTOs;
+using ExpenseTracker.Api.DTOs.Auth;
 using ExpenseTracker.Api.Enums;
 using ExpenseTracker.Api.Interfaces;
 using ExpenseTracker.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,15 +17,18 @@ public class AuthController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ITokenService _tokenService;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly ICurrentUserService _currentUserService;
 
     public AuthController(
         ApplicationDbContext context,
         ITokenService tokenService,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        ICurrentUserService currentUserService)
     {
         _context = context;
         _tokenService = tokenService;
         _passwordHasher = passwordHasher;
+        _currentUserService = currentUserService;
     }
 
     [HttpPost("register")]
@@ -98,5 +103,29 @@ public class AuthController : ControllerBase
             Name = user.Name,
             Email = user.Email
         });
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<CurrentUserDto>> Me()
+    {
+        var userId = _currentUserService.UserId;
+
+        var user = await _context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => new CurrentUserDto
+            {
+                Id = u.Id,
+                Name = u.Name,
+                Email = u.Email
+            })
+            .FirstOrDefaultAsync();
+
+        if (user is null)
+        {
+            return NotFound("Usuario no encontrado.");
+        }
+
+        return Ok(user);
     }
 }
