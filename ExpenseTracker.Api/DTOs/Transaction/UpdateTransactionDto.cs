@@ -9,7 +9,7 @@ public class UpdateTransactionDto
     [MaxLength(150, ErrorMessage = "La descripción no puede superar los 150 caracteres.")]
     public string Description { get; set; } = string.Empty;
 
-    [Range(typeof(decimal), "0.01", "999999999999999.99", ErrorMessage = "El monto debe ser mayor a 0.")]
+    [Range(0.01, 999999999, ErrorMessage = "El monto debe ser mayor a 0.")]
     public decimal Amount { get; set; }
 
     [Required(ErrorMessage = "La fecha es obligatoria.")]
