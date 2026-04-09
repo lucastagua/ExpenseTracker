@@ -104,10 +104,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "https://expense-tracker-16r7wjxkw-lucastaguas-projects.vercel.app"
-            )
+            .SetIsOriginAllowed(origin =>
+                origin == "http://localhost:5173" ||
+                origin.StartsWith("https://expense-tracker-") && origin.EndsWith(".vercel.app"))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -125,9 +124,9 @@ app.UseHttpsRedirection();
 
 app.UseMiddleware<ExceptionMiddleware>();
 
-app.UseAuthentication();
-
 app.UseCors("Frontend");
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 
