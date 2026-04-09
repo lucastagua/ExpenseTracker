@@ -104,7 +104,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(
+                "http://localhost:5173",
+                "https://expense-tracker-16r7wjxkw-lucastaguas-projects.vercel.app/login"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
