@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: expense-tracker-api
-    runtime: dotnet
-    buildCommand: dotnet publish -c Release -o out
-    startCommand: dotnet out/ExpenseTracker.Api.dll
