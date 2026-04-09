@@ -106,7 +106,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
-                "https://expense-tracker-16r7wjxkw-lucastaguas-projects.vercel.app/login"
+                "https://expense-tracker-16r7wjxkw-lucastaguas-projects.vercel.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
