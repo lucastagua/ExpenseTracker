@@ -104,9 +104,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .SetIsOriginAllowed(origin =>
-                origin == "http://localhost:5173" ||
-                origin.StartsWith("https://expense-tracker-") && origin.EndsWith(".vercel.app"))
+            .AllowAnyOrigin()
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -120,7 +118,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseMiddleware<ExceptionMiddleware>();
 
