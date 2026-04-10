@@ -1,20 +1,41 @@
 using System.Text;
 using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.Interfaces;
+using ExpenseTracker.Api.Middleware;
 using ExpenseTracker.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using ExpenseTracker.Api.Middleware;
-using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
 builder.Services.AddControllers();
 
-// Swagger / OpenAPI
+// Validaciones custom
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value?.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
+            );
+
+        return new BadRequestObjectResult(new
+        {
+            StatusCode = 400,
+            Message = "Error de validación.",
+            Errors = errors
+        });
+    };
+});
+
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -49,15 +70,31 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-// Servicios de hashing de contraseñas
-builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-// Servicios propios
+
+// Servicios
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .SetIsOriginAllowed(origin =>
+                origin == "http://localhost:5173" ||
+                origin.StartsWith("https://expense-tracker-") && origin.EndsWith(".vercel.app"))
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 // Auth JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -75,57 +112,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             )
         };
     });
-// Configuración global para errores de validación
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.InvalidModelStateResponseFactory = context =>
-    {
-        var errors = context.ModelState
-            .Where(x => x.Value?.Errors.Count > 0)
-            .ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
-            );
-
-        return new BadRequestObjectResult(new
-        {
-            StatusCode = 400,
-            Message = "Error de validación.",
-            Errors = errors
-        });
-    };
-});
 
 builder.Services.AddAuthorization();
 
-// Configuración de CORS para permitir solicitudes desde el frontend
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Frontend", policy =>
-    {
-        policy
-            .AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
-
 var app = builder.Build();
 
+// Swagger solo en desarrollo
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
-
+// Middleware pipeline
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseCors("Frontend");
 
-app.UseAuthentication();
+// app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
