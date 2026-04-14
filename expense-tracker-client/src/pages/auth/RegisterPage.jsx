@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 
-export default function LoginPage() {
-  const { login } = useAuth();
+export default function RegisterPage() {
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
+    name: "",
     email: "",
     password: "",
   });
@@ -25,10 +26,10 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await login(form);
+      await register(form);
       navigate("/");
     } catch (err) {
-      setError(err?.response?.data?.message || "No se pudo iniciar sesión.");
+      setError(err?.response?.data?.message || "No se pudo registrar.");
     }
   };
 
@@ -39,14 +40,25 @@ export default function LoginPage() {
           <div className="col-md-6 col-lg-5">
             <div className="card auth-card">
               <div className="card-body p-4 p-md-5">
-                <h1 className="page-title fs-2 mb-2">Iniciar sesión</h1>
+                <h1 className="page-title fs-2 mb-2">Crear cuenta</h1>
                 <p className="section-subtitle mb-4">
-                  Entrá para administrar tus ingresos y gastos.
+                  Empezá a registrar y analizar tus finanzas.
                 </p>
 
                 {error && <div className="alert alert-danger">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
+                  <div className="mb-3">
+                    <label className="form-label">Nombre</label>
+                    <input
+                      className="form-control"
+                      type="text"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                    />
+                  </div>
+
                   <div className="mb-3">
                     <label className="form-label">Email</label>
                     <input
@@ -70,12 +82,12 @@ export default function LoginPage() {
                   </div>
 
                   <button className="btn btn-dark w-100 py-2" type="submit">
-                    Entrar
+                    Registrarme
                   </button>
                 </form>
 
                 <p className="mt-4 mb-0 text-muted">
-                  ¿No tenés cuenta? <Link to="/register">Registrate</Link>
+                  ¿Ya tenés cuenta? <Link to="/login">Iniciá sesión</Link>
                 </p>
               </div>
             </div>
