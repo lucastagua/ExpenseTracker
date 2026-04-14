@@ -7,7 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Dockerfile" />
+    <Compile Remove="Dockerfile" />
+    <None Include="Dockerfile" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,10 +26,6 @@
 
   <ItemGroup>
     <Folder Include="Helpers\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Dockerfile" />
   </ItemGroup>
 
 </Project>
