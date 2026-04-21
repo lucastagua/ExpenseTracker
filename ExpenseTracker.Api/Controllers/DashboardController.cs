@@ -112,7 +112,7 @@ public class DashboardController : ControllerBase
 
         var userId = _currentUserService.UserId;
 
-        var startDate = new DateTime(year, month, 1);
+        var startDate = DateTime.SpecifyKind(new DateTime(year, month, 1), DateTimeKind.Utc);
         var endDate = startDate.AddMonths(1);
 
         var monthlyTransactionsQuery = _context.Transactions
@@ -190,7 +190,7 @@ public class DashboardController : ControllerBase
 
         var userId = _currentUserService.UserId;
 
-        var startDate = new DateTime(year, 1, 1);
+        var startDate = DateTime.SpecifyKind(new DateTime(year, 1, 1), DateTimeKind.Utc);
         var endDate = startDate.AddYears(1);
 
         var groupedData = await _context.Transactions

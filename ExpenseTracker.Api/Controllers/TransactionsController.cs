@@ -147,7 +147,7 @@ public class TransactionsController : ControllerBase
         {
             Description = dto.Description,
             Amount = dto.Amount,
-            Date = dto.Date,
+            Date = DateTime.SpecifyKind(dto.Date, DateTimeKind.Utc),
             Type = dto.Type,
             Notes = dto.Notes,
             CategoryId = dto.CategoryId,
@@ -200,7 +200,7 @@ public class TransactionsController : ControllerBase
 
         transaction.Description = dto.Description;
         transaction.Amount = dto.Amount;
-        transaction.Date = dto.Date;
+        transaction.Date = DateTime.SpecifyKind(dto.Date, DateTimeKind.Utc);
         transaction.Type = dto.Type;
         transaction.Notes = dto.Notes;
         transaction.CategoryId = dto.CategoryId;
