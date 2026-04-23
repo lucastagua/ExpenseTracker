@@ -18,9 +18,9 @@ const COLORS = [
   "#6c757d",
 ];
 
-export default function ExpensesPieChart({ data }) {
-  if (!data || data.length === 0) {
-    return <p className="mb-0">No hay gastos por categoría este mes.</p>;
+export default function ExpensesPieChart({ data = [] }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return null;
   }
 
   return (

@@ -6,7 +6,8 @@ import {
 } from "../../services/dashboardService";
 import MonthlyHistoryChart from "../../components/common/MonthlyHistoryChart";
 import ExpensesPieChart from "../../components/common/ExpensesPieChart";
-import Loader from "../../components/common/Loader";
+import Spinner from "../../components/common/Spinner";
+import EmptyState from "../../components/common/EmptyState";
 
 export default function DashboardPage() {
   const currentDate = new Date();
@@ -39,9 +40,9 @@ export default function DashboardPage() {
             getMonthlyHistoryRequest(currentYear),
           ]);
 
-        setSummary(summaryData);
-        setMonthlySummary(monthlySummaryData);
-        setMonthlyHistory(monthlyHistoryData);
+        setSummary(summaryData ?? {});
+        setMonthlySummary(monthlySummaryData ?? {});
+        setMonthlyHistory(Array.isArray(monthlyHistoryData) ? monthlyHistoryData : []);
       } catch {
         setError("No se pudo cargar el dashboard.");
       } finally {
@@ -53,19 +54,20 @@ export default function DashboardPage() {
   }, [currentYear, currentMonth]);
 
   if (loading) {
-    return <Loader />;
+    return <Spinner text="Cargando dashboard..." />;
   }
 
   if (error) {
     return <div className="alert alert-danger">{error}</div>;
   }
 
-  if (!summary || !monthlySummary) {
-    return <div className="alert alert-warning">No hay datos para mostrar.</div>;
-  }
+  const recentTransactions = Array.isArray(summary?.recentTransactions)
+    ? summary.recentTransactions
+    : [];
 
-  const recentTransactions = summary?.recentTransactions ?? [];
-  const expensesByCategory = monthlySummary?.expensesByCategory ?? [];
+  const expensesByCategory = Array.isArray(monthlySummary?.expensesByCategory)
+    ? monthlySummary.expensesByCategory
+    : [];
 
   return (
     <div>
@@ -82,7 +84,7 @@ export default function DashboardPage() {
             <div className="card-body">
               <div className="metric-label">Ingresos totales</div>
               <p className="metric-value amount-income">
-                {formatCurrency(summary.totalIncome)}
+                {formatCurrency(summary?.totalIncome)}
               </p>
             </div>
           </div>
@@ -93,7 +95,7 @@ export default function DashboardPage() {
             <div className="card-body">
               <div className="metric-label">Gastos totales</div>
               <p className="metric-value amount-expense">
-                {formatCurrency(summary.totalExpense)}
+                {formatCurrency(summary?.totalExpense)}
               </p>
             </div>
           </div>
@@ -104,7 +106,7 @@ export default function DashboardPage() {
             <div className="card-body">
               <div className="metric-label">Balance</div>
               <p className="metric-value amount-balance">
-                {formatCurrency(summary.balance)}
+                {formatCurrency(summary?.balance)}
               </p>
             </div>
           </div>
@@ -114,7 +116,7 @@ export default function DashboardPage() {
           <div className="card metric-card metric-count h-100">
             <div className="card-body">
               <div className="metric-label">Transacciones</div>
-              <p className="metric-value">{summary.transactionsCount}</p>
+              <p className="metric-value">{summary?.transactionsCount ?? 0}</p>
             </div>
           </div>
         </div>
@@ -122,7 +124,8 @@ export default function DashboardPage() {
 
       <div className="soft-card p-4 mb-4">
         <h5 className="card-title-pro mb-3">
-          Resumen mensual ({monthlySummary.month}/{monthlySummary.year})
+          Resumen mensual ({monthlySummary?.month ?? currentMonth}/
+          {monthlySummary?.year ?? currentYear})
         </h5>
 
         <div className="row g-3">
@@ -130,7 +133,7 @@ export default function DashboardPage() {
             <div className="border rounded-4 p-3 h-100">
               <div className="metric-label">Ingresos del mes</div>
               <p className="metric-value amount-income fs-3">
-                {formatCurrency(monthlySummary.totalIncome)}
+                {formatCurrency(monthlySummary?.totalIncome)}
               </p>
             </div>
           </div>
@@ -139,7 +142,7 @@ export default function DashboardPage() {
             <div className="border rounded-4 p-3 h-100">
               <div className="metric-label">Gastos del mes</div>
               <p className="metric-value amount-expense fs-3">
-                {formatCurrency(monthlySummary.totalExpense)}
+                {formatCurrency(monthlySummary?.totalExpense)}
               </p>
             </div>
           </div>
@@ -148,7 +151,7 @@ export default function DashboardPage() {
             <div className="border rounded-4 p-3 h-100">
               <div className="metric-label">Balance del mes</div>
               <p className="metric-value amount-balance fs-3">
-                {formatCurrency(monthlySummary.balance)}
+                {formatCurrency(monthlySummary?.balance)}
               </p>
             </div>
           </div>
@@ -159,14 +162,22 @@ export default function DashboardPage() {
         <div className="col-xl-7">
           <div className="soft-card p-4 h-100">
             <h5 className="card-title-pro mb-3">Ingresos vs gastos por mes</h5>
-            <MonthlyHistoryChart data={monthlyHistory} />
+            {monthlyHistory.length === 0 ? (
+              <EmptyState text="No hay historial suficiente para mostrar el gráfico." />
+            ) : (
+              <MonthlyHistoryChart data={monthlyHistory} />
+            )}
           </div>
         </div>
 
         <div className="col-xl-5">
           <div className="soft-card p-4 h-100">
             <h5 className="card-title-pro mb-3">Gastos por categoría del mes</h5>
-            <ExpensesPieChart data={expensesByCategory} />
+            {expensesByCategory.length === 0 ? (
+              <EmptyState text="No hay gastos por categoría este mes." />
+            ) : (
+              <ExpensesPieChart data={expensesByCategory} />
+            )}
           </div>
         </div>
       </div>
@@ -219,7 +230,7 @@ export default function DashboardPage() {
             <h5 className="card-title-pro mb-3">Historial mensual ({currentYear})</h5>
 
             {monthlyHistory.length === 0 ? (
-              <div className="empty-state">No hay historial mensual.</div>
+              <EmptyState text="No hay historial mensual." />
             ) : (
               <div className="table-responsive">
                 <table className="table align-middle">
