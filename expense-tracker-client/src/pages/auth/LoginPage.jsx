@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,6 +13,7 @@ export default function LoginPage() {
   });
 
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setForm({
@@ -24,11 +26,29 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
+    if (!form.email.trim()) {
+      setError("El email es obligatorio.");
+      return;
+    }
+
+    if (!form.password.trim()) {
+      setError("La contraseña es obligatoria.");
+      return;
+    }
+
     try {
+      setSubmitting(true);
       await login(form);
+      toast.success("Sesión iniciada");
       navigate("/");
     } catch (err) {
-      setError(err?.response?.data?.message || "No se pudo iniciar sesión.");
+      const message =
+        err?.response?.data?.message || "No se pudo iniciar sesión.";
+
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -69,8 +89,12 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  <button className="btn btn-dark w-100 py-2" type="submit">
-                    Entrar
+                  <button
+                    className="btn btn-dark w-100 py-2"
+                    type="submit"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Ingresando..." : "Entrar"}
                   </button>
                 </form>
 

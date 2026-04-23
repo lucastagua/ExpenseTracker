@@ -6,16 +6,18 @@ import {
 } from "../../services/dashboardService";
 import MonthlyHistoryChart from "../../components/common/MonthlyHistoryChart";
 import ExpensesPieChart from "../../components/common/ExpensesPieChart";
+import Loader from "../../components/common/Loader";
 
 export default function DashboardPage() {
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth() + 1;
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1;
 
   const [summary, setSummary] = useState(null);
   const [monthlySummary, setMonthlySummary] = useState(null);
   const [monthlyHistory, setMonthlyHistory] = useState([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const formatCurrency = (value) =>
     new Intl.NumberFormat("es-AR", {
@@ -27,6 +29,9 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
+        setLoading(true);
+        setError("");
+
         const [summaryData, monthlySummaryData, monthlyHistoryData] =
           await Promise.all([
             getSummaryRequest(),
@@ -39,19 +44,28 @@ export default function DashboardPage() {
         setMonthlyHistory(monthlyHistoryData);
       } catch {
         setError("No se pudo cargar el dashboard.");
+      } finally {
+        setLoading(false);
       }
     };
 
     loadDashboard();
   }, [currentYear, currentMonth]);
 
+  if (loading) {
+    return <Loader />;
+  }
+
   if (error) {
     return <div className="alert alert-danger">{error}</div>;
   }
 
   if (!summary || !monthlySummary) {
-    return <div className="container py-4">Cargando dashboard...</div>;
+    return <div className="alert alert-warning">No hay datos para mostrar.</div>;
   }
+
+  const recentTransactions = summary?.recentTransactions ?? [];
+  const expensesByCategory = monthlySummary?.expensesByCategory ?? [];
 
   return (
     <div>
@@ -152,7 +166,7 @@ export default function DashboardPage() {
         <div className="col-xl-5">
           <div className="soft-card p-4 h-100">
             <h5 className="card-title-pro mb-3">Gastos por categoría del mes</h5>
-            <ExpensesPieChart data={monthlySummary.expensesByCategory} />
+            <ExpensesPieChart data={expensesByCategory} />
           </div>
         </div>
       </div>
@@ -162,11 +176,11 @@ export default function DashboardPage() {
           <div className="soft-card p-4 h-100">
             <h5 className="card-title-pro mb-3">Movimientos recientes</h5>
 
-            {summary.recentTransactions.length === 0 ? (
-              <div className="empty-state">No hay movimientos recientes.</div>
+            {recentTransactions.length === 0 ? (
+              <EmptyState text="No hay movimientos recientes." />
             ) : (
               <ul className="list-group list-group-flush">
-                {summary.recentTransactions.map((item) => (
+                {recentTransactions.map((item) => (
                   <li
                     key={item.id}
                     className="list-group-item d-flex justify-content-between align-items-center px-0"
@@ -174,7 +188,8 @@ export default function DashboardPage() {
                     <div>
                       <div className="fw-semibold">{item.description}</div>
                       <div className="text-muted small">
-                        {item.categoryName} · {new Date(item.date).toLocaleDateString()}
+                        {item.categoryName} ·{" "}
+                        {new Date(item.date).toLocaleDateString("es-AR")}
                       </div>
                     </div>
 
@@ -183,7 +198,11 @@ export default function DashboardPage() {
                         {formatCurrency(item.amount)}
                       </div>
                       <div>
-                        <span className={`badge ${item.type === 1 ? "text-bg-success" : "text-bg-danger"}`}>
+                        <span
+                          className={`badge ${
+                            item.type === 1 ? "text-bg-success" : "text-bg-danger"
+                          }`}
+                        >
                           {item.type === 1 ? "Ingreso" : "Gasto"}
                         </span>
                       </div>

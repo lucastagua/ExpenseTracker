@@ -5,11 +5,13 @@ import {
   getCategoriesRequest,
   updateCategoryRequest,
 } from "../../services/categoryService";
+import toast from "react-hot-toast";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -29,6 +31,15 @@ export default function CategoriesPage() {
     fetchCategories();
   }, []);
 
+  const reloadCategories = async () => {
+    try {
+      const data = await getCategoriesRequest();
+      setCategories(data);
+    } catch {
+      setError("No se pudieron cargar las categorías.");
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -44,31 +55,51 @@ export default function CategoriesPage() {
       type: 1,
     });
     setEditingId(null);
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    try {
-      if (editingId) {
-        const updatedCategory = await updateCategoryRequest(editingId, form);
+    if (!form.name.trim()) {
+      setError("El nombre es obligatorio.");
+      return;
+    }
 
-        setCategories((prev) =>
-          prev.map((cat) => (cat.id === editingId ? updatedCategory : cat))
-        );
+    try {
+      setSubmitting(true);
+
+      const wasEditing = !!editingId;
+
+      const payload = {
+        name: form.name.trim(),
+        type: form.type,
+      };
+
+      if (editingId) {
+        await updateCategoryRequest(editingId, payload);
       } else {
-        const newCategory = await createCategoryRequest(form);
-        setCategories((prev) => [...prev, newCategory]);
+        await createCategoryRequest(payload);
       }
 
       resetForm();
-    } catch (err) {
-      setError(
-        err?.response?.data?.message || "No se pudo guardar la categoría."
-      );
-    }
-  };
+      await reloadCategories();
+
+      toast.success(
+        wasEditing ? "Categoría actualizada" : "Categoría creada"
+    );
+  } catch (err) {
+    const message =
+      err?.response?.data?.message ||
+      "No se pudo guardar la categoría.";
+
+    setError(message);
+    toast.error(message);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const handleEdit = (category) => {
     setForm({
@@ -80,22 +111,31 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm("¿Seguro que querés eliminar esta categoría?");
+    const confirmed = window.confirm(
+      "¿Seguro que querés eliminar esta categoría?"
+    );
+
     if (!confirmed) return;
 
     setError("");
 
     try {
       await deleteCategoryRequest(id);
-      setCategories((prev) => prev.filter((cat) => cat.id !== id));
 
       if (editingId === id) {
         resetForm();
       }
+
+      await reloadCategories();
+
+      toast.success("Categoría eliminada");
     } catch (err) {
-      setError(
-        err?.response?.data?.message || "No se pudo eliminar la categoría."
-      );
+      const message =
+        err?.response?.data?.message ||
+        "No se pudo eliminar la categoría.";
+
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -135,8 +175,14 @@ export default function CategoriesPage() {
           </div>
 
           <div className="col-md-2">
-            <button className="btn btn-dark w-100" type="submit">
-              {editingId ? "Guardar cambios" : "Agregar"}
+            <button className="btn btn-dark w-100" type="submit" disabled={submitting}>
+              {submitting
+                ? editingId
+                  ? "Guardando..."
+                  : "Creando..."
+                : editingId
+                ? "Guardar cambios"
+                : "Agregar"}
             </button>
           </div>
 
@@ -146,6 +192,7 @@ export default function CategoriesPage() {
                 type="button"
                 className="btn btn-outline-secondary w-100"
                 onClick={resetForm}
+                disabled={submitting}
               >
                 Cancelar
               </button>
@@ -160,28 +207,32 @@ export default function CategoriesPage() {
             key={cat.id}
             className="list-group-item d-flex justify-content-between align-items-center"
           >
-            <span>
-              <div className="d-flex align-items-center gap-2">
-                <span>{cat.name}</span>
-                <span className={`badge ${cat.type === 1 ? "text-bg-success" : "text-bg-danger"}`}>
-                  {cat.type === 1 ? "Ingreso" : "Gasto"}
-                </span>
-              </div>
-            </span>
+            <div className="d-flex align-items-center gap-2">
+              <span>{cat.name}</span>
+              <span
+                className={`badge ${
+                  cat.type === 1 ? "text-bg-success" : "text-bg-danger"
+                }`}
+              >
+                {cat.type === 1 ? "Ingreso" : "Gasto"}
+              </span>
+            </div>
 
             <div className="d-flex gap-2">
               <button
                 className="btn btn-sm btn-outline-primary"
                 onClick={() => handleEdit(cat)}
+                title="Editar categoría"
               >
-                Editar
+                ✏️ Editar
               </button>
 
               <button
                 className="btn btn-sm btn-outline-danger"
                 onClick={() => handleDelete(cat.id)}
+                title="Eliminar categoría"
               >
-                Eliminar
+                🗑 Eliminar
               </button>
             </div>
           </li>

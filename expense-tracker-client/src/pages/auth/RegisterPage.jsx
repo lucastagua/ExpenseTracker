@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
+import toast from "react-hot-toast";
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -13,6 +14,7 @@ export default function RegisterPage() {
   });
 
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setForm({
@@ -25,11 +27,39 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
+    if (!form.name.trim()) {
+      setError("El nombre es obligatorio.");
+      return;
+    }
+
+    if (!form.email.trim()) {
+      setError("El email es obligatorio.");
+      return;
+    }
+
+    if (!form.password.trim()) {
+      setError("La contraseña es obligatoria.");
+      return;
+    }
+
+    if (form.password.trim().length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
     try {
+      setSubmitting(true);
       await register(form);
+      toast.success("Cuenta creada correctamente");
       navigate("/");
     } catch (err) {
-      setError(err?.response?.data?.message || "No se pudo registrar.");
+      const message =
+        err?.response?.data?.message || "No se pudo registrar.";
+
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -81,8 +111,12 @@ export default function RegisterPage() {
                     />
                   </div>
 
-                  <button className="btn btn-dark w-100 py-2" type="submit">
-                    Registrarme
+                  <button
+                    className="btn btn-dark w-100 py-2"
+                    type="submit"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Creando cuenta..." : "Registrarme"}
                   </button>
                 </form>
 
