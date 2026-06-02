@@ -1,4 +1,4 @@
-﻿namespace ExpenseTracker.Api.DTOs;
+﻿namespace ExpenseTracker.Api.DTOs.Auth;
 
 public class AuthResponseDto
 {

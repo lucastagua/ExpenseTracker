@@ -1,9 +1,11 @@
 ﻿using ExpenseTracker.Api.Data;
+using ExpenseTracker.Api.Dtos.Auth;
 using ExpenseTracker.Api.DTOs;
 using ExpenseTracker.Api.DTOs.Auth;
 using ExpenseTracker.Api.Enums;
 using ExpenseTracker.Api.Interfaces;
 using ExpenseTracker.Api.Models;
+using ExpenseTracker.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,17 +20,24 @@ public class AuthController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IEmailService _emailService;
+    private readonly IConfiguration _configuration;
 
     public AuthController(
         ApplicationDbContext context,
         ITokenService tokenService,
         IPasswordHasher passwordHasher,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IEmailService emailService,
+        IConfiguration configuration
+        )
     {
         _context = context;
         _tokenService = tokenService;
         _passwordHasher = passwordHasher;
         _currentUserService = currentUserService;
+        _emailService = emailService;
+        _configuration = configuration;
     }
 
     [HttpPost("register")]
@@ -127,5 +136,70 @@ public class AuthController : ControllerBase
         }
 
         return Ok(user);
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+    ForgotPasswordDto dto)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(x => x.Email == dto.Email);
+
+        if (user != null)
+        {
+            user.PasswordResetToken = Guid.NewGuid().ToString();
+            user.PasswordResetTokenExpires = DateTime.UtcNow.AddHours(1);
+
+            await _context.SaveChangesAsync();
+
+            var frontendUrl = _configuration["Email:FrontendUrl"];
+            var resetLink = $"{frontendUrl}/reset-password/{user.PasswordResetToken}";
+
+            await _emailService.SendPasswordResetEmailAsync(user.Email, resetLink);
+        }
+
+        return Ok(new
+        {
+            message =
+                "Se ha enviado un enlace de restablecimiento de contraseña si el email existe."
+        });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+    ResetPasswordDto dto)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(x =>
+                x.PasswordResetToken == dto.Token);
+
+        if (user == null)
+        {
+            return BadRequest(new
+            {
+                message = "Token inválido."
+            });
+        }
+
+        if (user.PasswordResetTokenExpires < DateTime.UtcNow)
+        {
+            return BadRequest(new
+            {
+                message = "Token expirado."
+            });
+        }
+
+        user.PasswordHash =
+            BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpires = null;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Contraseña actualizada."
+        });
     }
 }

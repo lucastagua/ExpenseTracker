@@ -1,52 +1,60 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/useAuth";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { resetPasswordRequest } from "../../services/authService";
 
-export default function LoginPage() {
-  const { login } = useAuth();
+export default function ResetPasswordPage() {
+  const { token } = useParams();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    email: "",
-    password: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
+    setForm((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!form.email.trim()) {
-      setError("El email es obligatorio.");
+    if (!form.newPassword.trim()) {
+      setError("La nueva contraseña es obligatoria.");
       return;
     }
 
-    if (!form.password.trim()) {
-      setError("La contraseña es obligatoria.");
+    if (form.newPassword.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    if (form.newPassword !== form.confirmPassword) {
+      setError("Las contraseñas no coinciden.");
       return;
     }
 
     try {
       setSubmitting(true);
-      await login(form);
-      toast.success("Sesión iniciada");
-      navigate("/");
-    } catch (err) {
-      const message =
-        err?.response?.data?.message || "No se pudo iniciar sesión.";
 
-      setError(message);
-      toast.error(message);
+      await resetPasswordRequest(token, form.newPassword);
+
+      toast.success("Contraseña actualizada");
+      navigate("/login");
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        "No se pudo restablecer la contraseña.";
+
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -59,40 +67,34 @@ export default function LoginPage() {
           <div className="col-md-6 col-lg-5">
             <div className="card auth-card">
               <div className="card-body p-4 p-md-5">
-                <h1 className="page-title fs-2 mb-2">Iniciar sesión</h1>
+                <h1 className="page-title fs-2 mb-2">Nueva contraseña</h1>
                 <p className="section-subtitle mb-4">
-                  Entrá para administrar tus ingresos y gastos.
+                  Ingresá tu nueva contraseña para recuperar el acceso.
                 </p>
 
                 {error && <div className="alert alert-danger">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                   <div className="mb-3">
-                    <label className="form-label">Email</label>
+                    <label className="form-label">Nueva contraseña</label>
                     <input
                       className="form-control"
-                      type="email"
-                      name="email"
-                      value={form.email}
+                      type="password"
+                      name="newPassword"
+                      value={form.newPassword}
                       onChange={handleChange}
                     />
                   </div>
 
                   <div className="mb-4">
-                    <label className="form-label">Contraseña</label>
+                    <label className="form-label">Confirmar contraseña</label>
                     <input
                       className="form-control"
                       type="password"
-                      name="password"
-                      value={form.password}
+                      name="confirmPassword"
+                      value={form.confirmPassword}
                       onChange={handleChange}
                     />
-                  </div>
-
-                  <div className="mb-3 text-end">
-                    <Link to="/forgot-password" className="small">
-                      ¿Olvidaste tu contraseña?
-                    </Link>
                   </div>
 
                   <button
@@ -100,12 +102,12 @@ export default function LoginPage() {
                     type="submit"
                     disabled={submitting}
                   >
-                    {submitting ? "Ingresando..." : "Entrar"}
+                    {submitting ? "Guardando..." : "Guardar contraseña"}
                   </button>
                 </form>
 
                 <p className="mt-4 mb-0 text-muted">
-                  ¿No tenés cuenta? <Link to="/register">Registrate</Link>
+                  <Link to="/login">Volver al login</Link>
                 </p>
               </div>
             </div>

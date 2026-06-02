@@ -80,6 +80,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddHttpClient<IEmailService, EmailService>();
 
 // CORS
 builder.Services.AddCors(options =>

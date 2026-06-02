@@ -7,6 +7,9 @@ import RegisterPage from "../pages/auth/RegisterPage";
 import CategoriesPage from "../pages/categories/CategoriesPage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import TransactionsPage from "../pages/transactions/TransactionsPage";
+import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
+
 
 export default function AppRouter() {
   return (
@@ -16,6 +19,8 @@ export default function AppRouter() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
             <Route
               path="/"
