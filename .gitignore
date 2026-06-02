@@ -4,6 +4,7 @@ dist/
 .env
 
 # .NET
+appsettings.Development.json
 bin/
 obj/
 
